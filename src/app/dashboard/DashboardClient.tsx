@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus,
@@ -21,18 +21,14 @@ import {
     MinusCircle
 } from 'lucide-react';
 import { formatAMDLocalized } from '@/lib/formatters';
-
-type TransactionCategory = 'Food' | 'Transport' | 'Rent' | 'Utilities' | 'Salary' | 'Entertainment' | 'Health' | 'Other';
-type TransactionType = 'income' | 'expense';
-
-interface Transaction {
-    id: string;
-    amount: number;
-    category: TransactionCategory;
-    description: string;
-    type: TransactionType;
-    created_at: string;
-}
+import { 
+    getTransactions, 
+    createTransaction, 
+    calculateBalance,
+    type Transaction,
+    type TransactionCategory,
+    type TransactionType
+} from '@/services/transactions';
 
 const CATEGORY_ICONS: Record<TransactionCategory, React.ReactNode> = {
     Food: <Utensils className="w-5 h-5" />,
@@ -57,6 +53,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [historyFilter, setHistoryFilter] = useState<'all' | 'income' | 'expense'>('all');
+    const [loading, setLoading] = useState(true);
 
     // Form State
     const [amount, setAmount] = useState('');
@@ -64,31 +61,51 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
     const [description, setDescription] = useState('');
     const [type, setType] = useState<TransactionType>('expense');
 
-    const handleAddTransaction = (e: React.FormEvent) => {
+    // Load transactions on mount
+    useEffect(() => {
+        loadTransactions();
+    }, []);
+
+    const loadTransactions = async () => {
+        try {
+            setLoading(true);
+            const data = await getTransactions();
+            setTransactions(data);
+            setTotalBalance(calculateBalance(data));
+        } catch (error) {
+            console.error('Failed to load transactions:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddTransaction = async (e: React.FormEvent) => {
         e.preventDefault();
         const numericAmount = Math.abs(parseFloat(amount));
         if (isNaN(numericAmount) || numericAmount === 0 || !description) return;
 
         const finalAmount = type === 'income' ? numericAmount : -numericAmount;
 
-        const newTransaction: Transaction = {
-            id: Math.random().toString(36).substr(2, 9),
-            amount: finalAmount,
-            category,
-            description,
-            type,
-            created_at: new Date().toISOString(),
-        };
+        try {
+            const newTransaction = await createTransaction({
+                amount: finalAmount,
+                category,
+                description,
+            });
 
-        setTransactions([newTransaction, ...transactions]);
-        setTotalBalance(prev => prev + finalAmount);
-        setAmount('');
-        setDescription('');
+            setTransactions([newTransaction, ...transactions]);
+            setTotalBalance(prev => prev + finalAmount);
+            setAmount('');
+            setDescription('');
+        } catch (error) {
+            console.error('Failed to create transaction:', error);
+            alert('Failed to add transaction. Please try again.');
+        }
     };
 
     const filteredHistory = transactions.filter(tx => {
         if (historyFilter === 'all') return true;
-        return tx.type === historyFilter;
+        return historyFilter === 'income' ? tx.amount > 0 : tx.amount < 0;
     });
 
     const recentTransactions = transactions.slice(0, 5);
@@ -159,7 +176,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                         <ArrowUpRight className="w-3 h-3 text-emerald" /> Income
                                     </span>
                                     <span className="text-sm font-semibold text-text-primary">
-                                        {formatAMDLocalized(transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0))}
+                                        {formatAMDLocalized(transactions.filter(t => t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0))}
                                     </span>
                                 </div>
                                 <div className="flex flex-col gap-1 items-end">
@@ -167,7 +184,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                         <TrendingDown className="w-3 h-3 text-danger" /> Expenses
                                     </span>
                                     <span className="text-sm font-semibold text-text-primary">
-                                        {formatAMDLocalized(Math.abs(transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0)))}
+                                        {formatAMDLocalized(Math.abs(transactions.filter(t => t.amount < 0).reduce((acc, curr) => acc + curr.amount, 0)))}
                                     </span>
                                 </div>
                             </div>
@@ -278,7 +295,16 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
 
                         <div className="p-6 flex-1 overflow-y-auto w-full custom-scrollbar">
                             <AnimatePresence initial={false}>
-                                {recentTransactions.length === 0 ? (
+                                {loading ? (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="flex flex-col items-center justify-center h-full"
+                                    >
+                                        <div className="w-12 h-12 border-4 border-violet/20 border-t-violet rounded-full animate-spin mb-4" />
+                                        <p className="text-text-secondary text-sm">Loading transactions...</p>
+                                    </motion.div>
+                                ) : recentTransactions.length === 0 ? (
                                     <motion.div
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
@@ -301,7 +327,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                             >
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-inner
-                            ${tx.type === 'income' ? 'bg-emerald/10 text-emerald-light' : 'bg-violet/10 text-violet-light'}
+                            ${tx.amount > 0 ? 'bg-emerald/10 text-emerald-light' : 'bg-violet/10 text-violet-light'}
                             group-hover:scale-110 transition-transform duration-300
                           `}>
                                                         {CATEGORY_ICONS[tx.category]}
@@ -311,8 +337,8 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                                         <span className="text-xs text-text-secondary capitalize">{tx.category} • {new Date(tx.created_at).toLocaleDateString()}</span>
                                                     </div>
                                                 </div>
-                                                <span className={`font-bold text-lg ${tx.type === 'income' ? 'text-emerald-light' : 'text-text-primary'}`}>
-                                                    {tx.type === 'income' ? '+' : ''}{formatAMDLocalized(tx.amount)}
+                                                <span className={`font-bold text-lg ${tx.amount > 0 ? 'text-emerald-light' : 'text-text-primary'}`}>
+                                                    {tx.amount > 0 ? '+' : ''}{formatAMDLocalized(tx.amount)}
                                                 </span>
                                             </motion.div>
                                         ))}
@@ -399,7 +425,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                             >
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center
-                            ${tx.type === 'income' ? 'bg-emerald/10 text-emerald-light' : 'bg-violet/10 text-violet-light'}
+                            ${tx.amount > 0 ? 'bg-emerald/10 text-emerald-light' : 'bg-violet/10 text-violet-light'}
                           `}>
                                                         {CATEGORY_ICONS[tx.category]}
                                                     </div>
@@ -408,8 +434,8 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                                         <span className="text-xs text-text-secondary capitalize">{tx.category} • {new Date(tx.created_at).toLocaleDateString()}</span>
                                                     </div>
                                                 </div>
-                                                <span className={`font-bold text-sm ${tx.type === 'income' ? 'text-emerald-light' : 'text-text-primary'}`}>
-                                                    {tx.type === 'income' ? '+' : ''}{formatAMDLocalized(tx.amount)}
+                                                <span className={`font-bold text-sm ${tx.amount > 0 ? 'text-emerald-light' : 'text-text-primary'}`}>
+                                                    {tx.amount > 0 ? '+' : ''}{formatAMDLocalized(tx.amount)}
                                                 </span>
                                             </div>
                                         ))}
