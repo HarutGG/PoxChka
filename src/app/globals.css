@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════
+   PoxChka — Modern Dark Design System (Tailwind CSS v4)
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme inline {
+  /* ── Typography ── */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, monospace;
+
+  /* ── Core palette ── */
+  --color-background: #121212;
+  --color-surface: #1E1E1E;
+  --color-surface-hover: #2A2A2A;
+  --color-border: #2E2E2E;
+
+  /* ── Text ── */
+  --color-text-primary: #F5F5F5;
+  --color-text-secondary: #A0A0A0;
+  --color-foreground: #F5F5F5;
+
+  /* ── Accent: Electric Violet ── */
+  --color-violet: #8B5CF6;
+  --color-violet-light: #A78BFA;
+  --color-violet-dark: #7C3AED;
+  --color-violet-glow: rgba(139, 92, 246, 0.25);
+
+  /* ── Accent: Emerald Green ── */
+  --color-emerald: #10B981;
+  --color-emerald-light: #34D399;
+  --color-emerald-dark: #059669;
+  --color-emerald-glow: rgba(16, 185, 129, 0.25);
+
+  /* ── Semantic ── */
+  --color-danger: #EF4444;
+  --color-danger-light: #FCA5A5;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FCD34D;
+  --color-info: #3B82F6;
+  --color-info-light: #93C5FD;
+
+  /* ── Gradients ── */
+  --color-gradient-start: #8B5CF6;
+  --color-gradient-end: #10B981;
+
+  /* ── Border Radius ── */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Base Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Custom Scrollbar
+   ═══════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Selection
+   ═══════════════════════════════════════════════════════════════ */
+
+::selection {
+  background-color: var(--color-violet);
+  color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Focus styles
+   ═══════════════════════════════════════════════════════════════ */
+
+*:focus-visible {
+  outline: 2px solid var(--color-violet);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Utility animation keyframes
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px var(--color-violet-glow); }
+  50%      { box-shadow: 0 0 40px var(--color-violet-glow), 0 0 60px var(--color-emerald-glow); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
