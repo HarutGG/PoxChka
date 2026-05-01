@@ -111,9 +111,15 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
     };
 
     const handleLogout = async () => {
-        const supabase = createClient();
-        await supabase.auth.signOut();
-        router.push('/login');
+        try {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push('/');
+        } catch (error) {
+            console.error('Error logging out:', error);
+            // Still redirect even if there's an error
+            router.push('/');
+        }
     };
 
     const filteredHistory = transactions.filter(tx => {
