@@ -15,9 +15,11 @@ export default function LoginPage() {
         
         try {
             const supabase = createClient();
-            const redirectUrl = typeof window !== 'undefined' 
-                ? `${window.location.origin}/auth/callback`
-                : '/auth/callback';
+            
+            // Use NEXT_PUBLIC_SITE_URL if available, otherwise use window.location.origin
+            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                           (typeof window !== 'undefined' ? window.location.origin : '');
+            const redirectUrl = `${baseUrl}/auth/callback`;
 
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
