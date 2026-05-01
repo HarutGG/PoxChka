@@ -18,7 +18,9 @@ import {
     Filter,
     X,
     PlusCircle,
-    MinusCircle
+    MinusCircle,
+    LogOut,
+    ChevronDown
 } from 'lucide-react';
 import { formatAMDLocalized } from '@/lib/formatters';
 import { 
@@ -29,6 +31,8 @@ import {
     type TransactionCategory,
     type TransactionType
 } from '@/services/transactions';
+import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
 
 const CATEGORY_ICONS: Record<TransactionCategory, React.ReactNode> = {
     Food: <Utensils className="w-5 h-5" />,
@@ -48,12 +52,15 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: DashboardClientProps) {
+    const router = useRouter();
+    
     // State
     const [totalBalance, setTotalBalance] = useState(0);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [historyFilter, setHistoryFilter] = useState<'all' | 'income' | 'expense'>('all');
     const [loading, setLoading] = useState(true);
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
     // Form State
     const [amount, setAmount] = useState('');
@@ -103,6 +110,12 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
         }
     };
 
+    const handleLogout = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.push('/login');
+    };
+
     const filteredHistory = transactions.filter(tx => {
         if (historyFilter === 'all') return true;
         return historyFilter === 'income' ? tx.amount > 0 : tx.amount < 0;
@@ -132,50 +145,90 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                             </p>
                             <p className="text-xs text-text-secondary">{userEmail}</p>
                         </div>
-                        <div className="w-10 h-10 rounded-full border border-border overflow-hidden bg-surface flex items-center justify-center shadow-inner">
-                            {userAvatarUrl ? (
-                                <img
-                                    src={userAvatarUrl}
-                                    alt="User avatar"
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <span className="text-violet-light font-bold">
-                                    {userEmail?.[0]?.toUpperCase() || 'U'}
-                                </span>
-                            )}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowUserMenu(!showUserMenu)}
+                                className="flex items-center gap-2 focus:outline-none group"
+                            >
+                                <div className="w-10 h-10 rounded-full border border-border overflow-hidden bg-surface flex items-center justify-center shadow-inner transition-all group-hover:border-violet">
+                                    {userAvatarUrl ? (
+                                        <img
+                                            src={userAvatarUrl}
+                                            alt="User avatar"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-violet-light font-bold">
+                                            {userEmail?.[0]?.toUpperCase() || 'U'}
+                                        </span>
+                                    )}
+                                </div>
+                                <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* User Dropdown Menu */}
+                            <AnimatePresence>
+                                {showUserMenu && (
+                                    <>
+                                        <div 
+                                            className="fixed inset-0 z-40" 
+                                            onClick={() => setShowUserMenu(false)}
+                                        />
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="absolute right-0 mt-2 w-64 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50"
+                                        >
+                                            <div className="p-4 border-b border-border sm:hidden">
+                                                <p className="text-sm font-medium text-text-primary capitalize">
+                                                    {userFullName || userEmail?.split('@')[0]}
+                                                </p>
+                                                <p className="text-xs text-text-secondary mt-1">{userEmail}</p>
+                                            </div>
+                                            <button
+                                                onClick={handleLogout}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-left text-text-primary hover:bg-danger/10 hover:text-danger transition-colors"
+                                            >
+                                                <LogOut className="w-5 h-5" />
+                                                <span className="font-medium">Log Out</span>
+                                            </button>
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
                 </div>
             </nav>
 
-            <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
+            <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 w-full z-10 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 relative">
 
                 {/* Left Column: Stats & Add Transaction */}
-                <div className="lg:col-span-5 flex flex-col gap-8">
+                <div className="lg:col-span-5 flex flex-col gap-4 sm:gap-6 lg:gap-8">
 
                     {/* Glassmorphism Total Balance Card */}
-                    <div className="relative p-8 rounded-3xl overflow-hidden shadow-2xl bg-surface/40 backdrop-blur-md border border-white/10 group">
+                    <div className="relative p-6 sm:p-8 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-surface/40 backdrop-blur-md border border-white/10 group">
                         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-                        <div className="absolute -inset-0.5 bg-gradient-to-br from-violet-light/20 to-emerald-light/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl pointer-events-none blur-sm" />
+                        <div className="absolute -inset-0.5 bg-gradient-to-br from-violet-light/20 to-emerald-light/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl sm:rounded-3xl pointer-events-none blur-sm" />
 
                         <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-4">
-                                <p className="text-text-secondary text-sm font-semibold uppercase tracking-wider">Total Balance</p>
-                                <div className="w-8 h-8 rounded-full bg-violet/20 flex items-center justify-center text-violet-light">
-                                    <CreditCard className="w-4 h-4" />
+                            <div className="flex items-center justify-between mb-3 sm:mb-4">
+                                <p className="text-text-secondary text-xs sm:text-sm font-semibold uppercase tracking-wider">Total Balance</p>
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-violet/20 flex items-center justify-center text-violet-light">
+                                    <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </div>
                             </div>
-                            <h2 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-text-primary to-text-secondary mb-4 tracking-tight">
+                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-text-primary to-text-secondary mb-3 sm:mb-4 tracking-tight break-all">
                                 {formatAMDLocalized(totalBalance)}
                             </h2>
 
-                            <div className="flex items-center justify-between gap-4 mt-6">
+                            <div className="flex items-center justify-between gap-4 mt-4 sm:mt-6">
                                 <div className="flex flex-col gap-1">
                                     <span className="text-xs text-text-secondary flex items-center gap-1">
                                         <ArrowUpRight className="w-3 h-3 text-emerald" /> Income
                                     </span>
-                                    <span className="text-sm font-semibold text-text-primary">
+                                    <span className="text-xs sm:text-sm font-semibold text-text-primary break-all">
                                         {formatAMDLocalized(transactions.filter(t => t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0))}
                                     </span>
                                 </div>
@@ -183,7 +236,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                     <span className="text-xs text-text-secondary flex items-center gap-1">
                                         <TrendingDown className="w-3 h-3 text-danger" /> Expenses
                                     </span>
-                                    <span className="text-sm font-semibold text-text-primary">
+                                    <span className="text-xs sm:text-sm font-semibold text-text-primary break-all">
                                         {formatAMDLocalized(Math.abs(transactions.filter(t => t.amount < 0).reduce((acc, curr) => acc + curr.amount, 0)))}
                                     </span>
                                 </div>
@@ -192,35 +245,35 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                     </div>
 
                     {/* Add Transaction Form */}
-                    <div className="p-6 rounded-2xl bg-surface/60 backdrop-blur-sm border border-border">
-                        <h3 className="text-xl font-bold text-text-primary mb-6 flex items-center gap-2">
-                            <Plus className="w-5 h-5 text-violet-light" />
+                    <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-surface/60 backdrop-blur-sm border border-border">
+                        <h3 className="text-lg sm:text-xl font-bold text-text-primary mb-4 sm:mb-6 flex items-center gap-2">
+                            <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-violet-light" />
                             Add Transaction
                         </h3>
 
-                        <form onSubmit={handleAddTransaction} className="flex flex-col gap-4">
+                        <form onSubmit={handleAddTransaction} className="flex flex-col gap-3 sm:gap-4">
                             {/* Type Toggle */}
                             <div className="flex p-1 bg-background rounded-xl border border-border">
                                 <button
                                     type="button"
                                     onClick={() => setType('income')}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${type === 'income'
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${type === 'income'
                                             ? 'bg-emerald/10 text-emerald-light shadow-sm'
                                             : 'text-text-secondary hover:text-text-primary'
                                         }`}
                                 >
-                                    <PlusCircle className="w-4 h-4" />
+                                    <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     Income
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setType('expense')}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${type === 'expense'
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${type === 'expense'
                                             ? 'bg-danger/10 text-danger shadow-sm'
                                             : 'text-text-secondary hover:text-text-primary'
                                         }`}
                                 >
-                                    <MinusCircle className="w-4 h-4" />
+                                    <MinusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     Expense
                                 </button>
                             </div>
@@ -232,7 +285,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
                                     placeholder="e.g. 5000"
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
+                                    className="w-full bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                     required
                                 />
                             </div>
@@ -243,13 +296,13 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                     <select
                                         value={category}
                                         onChange={(e) => setCategory(e.target.value as TransactionCategory)}
-                                        className="w-full appearance-none bg-background border border-border rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
+                                        className="w-full appearance-none bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                     >
                                         {['Food', 'Transport', 'Rent', 'Utilities', 'Salary', 'Entertainment', 'Health', 'Other'].map(cat => (
                                             <option key={cat} value={cat}>{cat}</option>
                                         ))}
                                     </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary">
+                                    <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary">
                                         ▼
                                     </div>
                                 </div>
@@ -262,17 +315,17 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="What was this for?"
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
+                                    className="w-full bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                     required
                                 />
                             </div>
 
                             <button
                                 type="submit"
-                                className={`mt-2 w-full py-3.5 rounded-xl text-white font-semibold flex items-center justify-center gap-2 hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg 
+                                className={`mt-2 w-full py-3 sm:py-3.5 rounded-xl text-white text-sm sm:text-base font-semibold flex items-center justify-center gap-2 hover:opacity-90 hover:scale-[1.02] transition-all shadow-lg 
                   ${type === 'income' ? 'bg-gradient-to-r from-emerald to-emerald-dark shadow-emerald-glow' : 'bg-gradient-to-r from-violet to-violet-dark shadow-violet-glow'}`}
                             >
-                                <Plus className="w-5 h-5" />
+                                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                                 Add {type === 'income' ? 'Income' : 'Expense'}
                             </button>
                         </form>
@@ -281,19 +334,19 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
 
                 {/* Right Column: Recent Transactions List */}
                 <div className="lg:col-span-7">
-                    <div className="h-[730px] rounded-2xl bg-surface/40 backdrop-blur-sm border border-border flex flex-col overflow-hidden">
-                        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-surface/50">
-                            <h3 className="text-xl font-bold text-text-primary">Recent Transactions</h3>
+                    <div className="h-[500px] sm:h-[600px] lg:h-[730px] rounded-xl sm:rounded-2xl bg-surface/40 backdrop-blur-sm border border-border flex flex-col overflow-hidden">
+                        <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between bg-surface/50">
+                            <h3 className="text-lg sm:text-xl font-bold text-text-primary">Recent Transactions</h3>
                             <button
                                 onClick={() => setShowHistory(true)}
-                                className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg bg-background text-violet-light border border-violet/20 hover:bg-violet/10 transition-all"
+                                className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold rounded-lg bg-background text-violet-light border border-violet/20 hover:bg-violet/10 transition-all"
                             >
-                                <History className="w-4 h-4" />
-                                History
+                                <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span className="hidden sm:inline">History</span>
                             </button>
                         </div>
 
-                        <div className="p-6 flex-1 overflow-y-auto w-full custom-scrollbar">
+                        <div className="p-4 sm:p-6 flex-1 overflow-y-auto w-full custom-scrollbar">
                             <AnimatePresence initial={false}>
                                 {loading ? (
                                     <motion.div
@@ -301,8 +354,8 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                         animate={{ opacity: 1 }}
                                         className="flex flex-col items-center justify-center h-full"
                                     >
-                                        <div className="w-12 h-12 border-4 border-violet/20 border-t-violet rounded-full animate-spin mb-4" />
-                                        <p className="text-text-secondary text-sm">Loading transactions...</p>
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-violet/20 border-t-violet rounded-full animate-spin mb-4" />
+                                        <p className="text-text-secondary text-xs sm:text-sm">Loading transactions...</p>
                                     </motion.div>
                                 ) : recentTransactions.length === 0 ? (
                                     <motion.div
@@ -310,12 +363,12 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                         animate={{ opacity: 1 }}
                                         className="flex flex-col items-center justify-center h-full opacity-50"
                                     >
-                                        <Briefcase className="w-12 h-12 text-text-secondary mb-4" />
-                                        <p className="text-text-secondary text-lg">No activity yet.</p>
-                                        <p className="text-text-secondary text-sm">Start by adding your first transaction!</p>
+                                        <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 text-text-secondary mb-4" />
+                                        <p className="text-text-secondary text-base sm:text-lg">No activity yet.</p>
+                                        <p className="text-text-secondary text-xs sm:text-sm">Start by adding your first transaction!</p>
                                     </motion.div>
                                 ) : (
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-2 sm:gap-3">
                                         {recentTransactions.map((tx) => (
                                             <motion.div
                                                 key={tx.id}
@@ -323,27 +376,27 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                                                 transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                                                className="group flex items-center justify-between p-4 rounded-xl bg-background border border-white/5 hover:border-violet/30 hover:bg-surface/60 transition-all duration-300"
+                                                className="group flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl bg-background border border-white/5 hover:border-violet/30 hover:bg-surface/60 transition-all duration-300"
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-inner
+                                                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center shadow-inner
                             ${tx.amount > 0 ? 'bg-emerald/10 text-emerald-light' : 'bg-violet/10 text-violet-light'}
                             group-hover:scale-110 transition-transform duration-300
                           `}>
                                                         {CATEGORY_ICONS[tx.category]}
                                                     </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold text-text-primary text-base">{tx.description}</span>
+                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                        <span className="font-semibold text-text-primary text-sm sm:text-base truncate">{tx.description}</span>
                                                         <span className="text-xs text-text-secondary capitalize">{tx.category} • {new Date(tx.created_at).toLocaleDateString()}</span>
                                                     </div>
                                                 </div>
-                                                <span className={`font-bold text-lg ${tx.amount > 0 ? 'text-emerald-light' : 'text-text-primary'}`}>
+                                                <span className={`font-bold text-sm sm:text-lg flex-shrink-0 ml-2 ${tx.amount > 0 ? 'text-emerald-light' : 'text-text-primary'}`}>
                                                     {tx.amount > 0 ? '+' : ''}{formatAMDLocalized(tx.amount)}
                                                 </span>
                                             </motion.div>
                                         ))}
                                         {transactions.length > 5 && (
-                                            <p className="text-center text-xs text-text-secondary mt-4">
+                                            <p className="text-center text-xs text-text-secondary mt-2 sm:mt-4">
                                                 Showing latest 5 of {transactions.length} transactions
                                             </p>
                                         )}
@@ -371,31 +424,31 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-2xl max-h-[80vh] flex flex-col bg-surface border border-border rounded-3xl shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-2xl max-h-[85vh] sm:max-h-[80vh] flex flex-col bg-surface border border-border rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden"
                         >
-                            <div className="p-6 border-b border-border flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-violet/10 flex items-center justify-center text-violet-light">
-                                        <History className="w-6 h-6" />
+                            <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-violet/10 flex items-center justify-center text-violet-light">
+                                        <History className="w-5 h-5 sm:w-6 sm:h-6" />
                                     </div>
-                                    <h2 className="text-2xl font-bold text-text-primary">Transaction History</h2>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-text-primary">Transaction History</h2>
                                 </div>
                                 <button
                                     onClick={() => setShowHistory(false)}
                                     className="p-2 rounded-lg hover:bg-white/5 text-text-secondary transition-colors"
                                 >
-                                    <X className="w-6 h-6" />
+                                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </button>
                             </div>
 
                             {/* Filters */}
-                            <div className="p-4 bg-background/50 flex items-center gap-4">
+                            <div className="p-3 sm:p-4 bg-background/50 flex items-center gap-4">
                                 <div className="flex items-center gap-2 bg-background p-1 rounded-xl border border-border">
                                     {(['all', 'income', 'expense'] as const).map(filter => (
                                         <button
                                             key={filter}
                                             onClick={() => setHistoryFilter(filter)}
-                                            className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${historyFilter === filter
+                                            className={`px-3 py-1 sm:px-4 sm:py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${historyFilter === filter
                                                     ? 'bg-violet/10 text-violet-light'
                                                     : 'text-text-secondary hover:text-text-primary'
                                                 }`}
@@ -410,31 +463,31 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
                                 {filteredHistory.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-48 opacity-50">
-                                        <History className="w-12 h-12 text-text-secondary mb-4" />
-                                        <p className="text-text-secondary">No transactions match your filter.</p>
+                                        <History className="w-10 h-10 sm:w-12 sm:h-12 text-text-secondary mb-4" />
+                                        <p className="text-text-secondary text-sm sm:text-base">No transactions match your filter.</p>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-2 sm:gap-3">
                                         {filteredHistory.map((tx) => (
                                             <div
                                                 key={tx.id}
-                                                className="flex items-center justify-between p-4 rounded-xl bg-background border border-white/5"
+                                                className="flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl bg-background border border-white/5"
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center
+                                                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-full flex items-center justify-center
                             ${tx.amount > 0 ? 'bg-emerald/10 text-emerald-light' : 'bg-violet/10 text-violet-light'}
                           `}>
                                                         {CATEGORY_ICONS[tx.category]}
                                                     </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold text-text-primary text-sm">{tx.description}</span>
+                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                        <span className="font-semibold text-text-primary text-xs sm:text-sm truncate">{tx.description}</span>
                                                         <span className="text-xs text-text-secondary capitalize">{tx.category} • {new Date(tx.created_at).toLocaleDateString()}</span>
                                                     </div>
                                                 </div>
-                                                <span className={`font-bold text-sm ${tx.amount > 0 ? 'text-emerald-light' : 'text-text-primary'}`}>
+                                                <span className={`font-bold text-xs sm:text-sm flex-shrink-0 ml-2 ${tx.amount > 0 ? 'text-emerald-light' : 'text-text-primary'}`}>
                                                     {tx.amount > 0 ? '+' : ''}{formatAMDLocalized(tx.amount)}
                                                 </span>
                                             </div>
@@ -448,7 +501,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
             </AnimatePresence>
 
             {/* Footer */}
-            <footer className="py-6 text-center text-sm text-text-secondary/60">
+            <footer className="py-4 sm:py-6 text-center text-xs sm:text-sm text-text-secondary/60">
                 PoxChka — Precision in Every Transaction
             </footer>
         </div>
