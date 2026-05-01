@@ -88,7 +88,11 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
 
     const handleAddTransaction = async (e: React.FormEvent) => {
         e.preventDefault();
-        const numericAmount = Math.abs(parseFloat(amount));
+        
+        // Remove any commas or spaces from the input
+        const cleanedAmount = amount.replace(/[,\s]/g, '');
+        const numericAmount = Math.abs(parseFloat(cleanedAmount));
+        
         if (isNaN(numericAmount) || numericAmount === 0 || !description) return;
 
         const finalAmount = type === 'income' ? numericAmount : -numericAmount;
@@ -287,10 +291,16 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">Amount (֏)</label>
                                 <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9,.\s]*"
                                     value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    placeholder="e.g. 5000"
+                                    onChange={(e) => {
+                                        // Allow only numbers, commas, dots, and spaces
+                                        const value = e.target.value.replace(/[^0-9,.\s]/g, '');
+                                        setAmount(value);
+                                    }}
+                                    placeholder="e.g. 5000 or 10,000"
                                     className="w-full bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                     required
                                 />
