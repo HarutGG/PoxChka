@@ -17,14 +17,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Load saved preference on mount (default to 'dark')
   useEffect(() => {
-    const stored = localStorage.getItem('poxchka-theme') as Theme | null;
+    const stored = typeof window !== 'undefined' 
+      ? localStorage.getItem('poxchka-theme') as Theme | null 
+      : null;
     setTheme(stored ?? 'dark');
     setMounted(true);
   }, []);
 
   // Sync HTML class and localStorage whenever theme changes
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || typeof window === 'undefined') return;
     const root = document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
@@ -35,11 +37,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   }, []);
 
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return null;
-  }
-
+  // Render children immediately to prevent hydration mismatch
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}

@@ -2,24 +2,34 @@
 
 import { createClient } from '@/utils/supabase/client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
-    const supabase = createClient();
+    const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
     const handleGoogleLogin = async () => {
         setLoading(true);
+        setError(null);
+        
         try {
+            const supabase = createClient();
+            const redirectUrl = typeof window !== 'undefined' 
+                ? `${window.location.origin}/auth/callback`
+                : '/auth/callback';
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
+                    redirectTo: redirectUrl,
                 },
             });
 
             if (error) throw error;
         } catch (error) {
             console.error('Error logging in:', error);
+            setError(error instanceof Error ? error.message : 'Failed to sign in');
             setLoading(false);
         }
     };
@@ -35,6 +45,12 @@ export default function LoginPage() {
                     </h1>
                     <p className="text-text-secondary">Sign in to manage your finances</p>
                 </div>
+
+                {error && (
+                    <div className="p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">
+                        {error}
+                    </div>
+                )}
 
                 <button
                     onClick={handleGoogleLogin}
@@ -64,7 +80,7 @@ export default function LoginPage() {
                 </button>
 
                 <p className="text-xs text-text-secondary/60">
-                    By continuing, you agree to PoxChka's Terms of Service and Privacy Policy.
+                    By continuing, you agree to PoxChka&apos;s Terms of Service and Privacy Policy.
                 </p>
             </main>
 
