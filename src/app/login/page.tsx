@@ -2,20 +2,21 @@
 
 import { createClient } from '@/utils/supabase/client';
 import { useState } from 'react';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useLocale } from '@/contexts/LocaleContext';
+
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useLocale();
 
     const handleGoogleLogin = async () => {
         setLoading(true);
         setError(null);
-        
+
         try {
             const supabase = createClient();
-            
-            // Prefer current browser origin so OAuth return matches the host you are on
-            // (localhost, Vercel preview, or custom domain). NEXT_PUBLIC_SITE_URL can
-            // still override when set explicitly.
+
             const baseUrl =
                 (typeof window !== 'undefined' ? window.location.origin : '') ||
                 process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
@@ -30,23 +31,27 @@ export default function LoginPage() {
             });
 
             if (error) throw error;
-        } catch (error) {
-            console.error('Error logging in:', error);
-            setError(error instanceof Error ? error.message : 'Failed to sign in');
+        } catch (err) {
+            console.error('Error logging in:', err);
+            setError(err instanceof Error ? err.message : t('login.signInFailed'));
             setLoading(false);
         }
     };
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-6">
+            <div className="absolute top-6 right-6 z-50">
+                <LanguageSwitcher />
+            </div>
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-violet/5 blur-[100px] pointer-events-none" />
 
             <main className="relative z-10 w-full max-w-md p-8 rounded-2xl bg-surface border border-border shadow-2xl flex flex-col gap-6 text-center">
                 <div className="flex flex-col gap-2">
                     <h1 className="text-3xl font-bold text-text-primary tracking-tight">
-                        Welcome to <span className="bg-gradient-to-r from-violet to-emerald bg-clip-text text-transparent">PoxChka</span>
+                        {t('login.welcome')}{' '}
+                        <span className="bg-gradient-to-r from-violet to-emerald bg-clip-text text-transparent">PoxChka</span>
                     </h1>
-                    <p className="text-text-secondary">Sign in to manage your finances</p>
+                    <p className="text-text-secondary">{t('login.subtitle')}</p>
                 </div>
 
                 {error && (
@@ -58,7 +63,7 @@ export default function LoginPage() {
                 <button
                     onClick={handleGoogleLogin}
                     disabled={loading}
-                    className="group relative flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-white text-black font-semibold text-base transition-all duration-300 hover:bg-zinc-100 disabled:opacity-70 disabled:cursor-wait overflow-hidden"
+                    className="group relative flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-surface text-text-primary font-semibold text-base border border-border shadow-md transition-all duration-300 hover:bg-surface-hover hover:shadow-lg disabled:opacity-70 disabled:cursor-wait overflow-hidden"
                 >
                     <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                         <path
@@ -78,18 +83,14 @@ export default function LoginPage() {
                             d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                         />
                     </svg>
-                    {loading ? 'Connecting...' : 'Continue with Google'}
-                    <div className="absolute inset-0 bg-black/5 translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
+                    {loading ? t('login.connecting') : t('login.continueGoogle')}
+                    <div className="absolute inset-0 bg-text-primary/[0.06] dark:bg-black/5 translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
                 </button>
 
-                <p className="text-xs text-text-secondary/60">
-                    By continuing, you agree to PoxChka&apos;s Terms of Service and Privacy Policy.
-                </p>
+                <p className="text-xs text-text-secondary/60">{t('login.terms')}</p>
             </main>
 
-            <footer className="absolute bottom-6 text-sm text-text-secondary/60">
-                Transparent, Secure, Premium.
-            </footer>
+            <footer className="absolute bottom-6 text-sm text-text-secondary/60">{t('login.footer')}</footer>
         </div>
     );
 }

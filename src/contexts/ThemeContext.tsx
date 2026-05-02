@@ -1,8 +1,34 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from 'react';
 
 type Theme = 'dark' | 'light';
+
+const STORAGE_KEY = 'poxchka-theme';
+const THEME_CHANGE = 'poxchka-theme-change';
+
+function readTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark';
+  const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+  return stored === 'light' || stored === 'dark' ? stored : 'dark';
+}
+
+function subscribe(onChange: () => void) {
+  const handler = () => onChange();
+  window.addEventListener('storage', handler);
+  window.addEventListener(THEME_CHANGE, handler);
+  return () => {
+    window.removeEventListener('storage', handler);
+    window.removeEventListener(THEME_CHANGE, handler);
+  };
+}
 
 interface ThemeContextType {
   theme: Theme;
@@ -11,37 +37,29 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [mounted, setMounted] = useState(false);
+function getServerTheme(): Theme {
+  return 'dark';
+}
 
-  // Load saved preference on mount (default to 'dark')
-  useEffect(() => {
-    const stored = typeof window !== 'undefined' 
-      ? localStorage.getItem('poxchka-theme') as Theme | null 
-      : null;
-    setTheme(stored ?? 'dark');
-    setMounted(true);
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const theme = useSyncExternalStore(subscribe, readTheme, getServerTheme);
+
+  const toggleTheme = useCallback(() => {
+    const next = readTheme() === 'dark' ? 'light' : 'dark';
+    localStorage.setItem(STORAGE_KEY, next);
+    window.dispatchEvent(new Event(THEME_CHANGE));
   }, []);
 
-  // Sync HTML class and localStorage whenever theme changes
   useEffect(() => {
-    if (!mounted || typeof window === 'undefined') return;
     const root = document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
-    localStorage.setItem('poxchka-theme', theme);
-  }, [theme, mounted]);
+  }, [theme]);
 
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
 
-  // Render children immediately to prevent hydration mismatch
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 }
 

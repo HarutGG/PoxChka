@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { Inter, Noto_Sans_Armenian } from "next/font/google";
+import { AppProviders } from "@/components/AppProviders";
 import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+});
+
+const notoSansArmenian = Noto_Sans_Armenian({
+  variable: "--font-hy",
+  subsets: ["armenian"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -23,8 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans min-h-screen antialiased`}>
-        <ThemeProvider>{children}</ThemeProvider>
+      <body
+        className={`${inter.variable} ${notoSansArmenian.variable} font-sans min-h-screen antialiased`}
+      >
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

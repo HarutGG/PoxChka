@@ -69,6 +69,10 @@ body {
   line-height: 1.6;
 }
 
+html[lang="hy"] body {
+  font-family: var(--font-hy), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Custom Scrollbar
    ═══════════════════════════════════════════════════════════════ */
@@ -129,33 +133,43 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Light Mode Overrides
+   Light Mode — Modern mid-tone “studio” (not washed-out / not white)
    ═══════════════════════════════════════════════════════════════ */
 
 .light {
-  /* ── Modern Light Palette (Slate & Indigo) ── */
-  --color-background: #F8FAFC; /* Slate 50 */
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F1F5F9; /* Slate 100 */
-  --color-border: #E2E8F0; /* Slate 200 */
+  /* Cool graphite canvas — clearly darker than paper-white */
+  --color-background: #BFC7D4;
+  --color-surface: #D8DEE9;
+  --color-surface-hover: #CBD2E0;
+  --color-border: #9BA6B8;
 
-  --color-text-primary: #0F172A; /* Slate 900 */
-  --color-text-secondary: #64748B; /* Slate 500 */
-  --color-foreground: #0F172A;
+  --color-text-primary: #0D0F14;
+  --color-text-secondary: #3D4556;
+  --color-foreground: #0D0F14;
 
-  /* Accent: Professional Indigo instead of pure Blue */
-  --color-violet: #6366F1; /* Indigo 500 */
-  --color-violet-light: #818CF8; /* Indigo 400 */
-  --color-violet-dark: #4F46E5; /* Indigo 600 */
-  --color-violet-glow: rgba(99, 102, 241, 0.1);
+  /* Electric violet tuned for gray fields */
+  --color-violet: #6D28D9;
+  --color-violet-light: #8B5CF6;
+  --color-violet-dark: #5B21B6;
+  --color-violet-glow: rgba(109, 40, 217, 0.28);
 
-  /* Emerald green refined for light background */
-  --color-emerald: #10B981;
-  --color-emerald-light: #34D399;
-  --color-emerald-dark: #059669;
-  --color-emerald-glow: rgba(16, 185, 129, 0.1);
+  --color-emerald: #059669;
+  --color-emerald-light: #10B981;
+  --color-emerald-dark: #047857;
+  --color-emerald-glow: rgba(5, 150, 105, 0.26);
 
-  /* Semantic Overrides */
-  --color-danger: #EF4444;
-  --color-warning: #F59E0B;
+  --color-danger: #DC2626;
+  --color-danger-light: #F87171;
+  --color-warning: #D97706;
+  --color-warning-light: #FBBF24;
+  --color-info: #2563EB;
+  --color-info-light: #60A5FA;
+
+  --color-gradient-start: #6D28D9;
+  --color-gradient-end: #059669;
+}
+
+.light ::selection {
+  background-color: var(--color-violet-dark);
+  color: #f8fafc;
 }

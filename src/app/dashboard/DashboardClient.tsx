@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus,
@@ -26,13 +26,14 @@ import {
     Edit2
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { formatAMDLocalized } from '@/lib/formatters';
+import { useLocale } from '@/contexts/LocaleContext';
+import { formatAMDForUi } from '@/lib/formatters';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { 
     getTransactions, 
     createTransaction, 
     calculateBalance,
     type Transaction,
-    type TransactionCategory,
     type TransactionType
 } from '@/services/transactions';
 import { createClient } from '@/utils/supabase/client';
@@ -51,8 +52,9 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     Other: <CreditCard className="w-5 h-5" />,
 };
 
-const INCOME_CATEGORIES = ['Salary', 'Gift', 'Investment', 'Other'];
-const EXPENSE_CATEGORIES = ['Food', 'Transport', 'Rent', 'Utilities', 'Entertainment', 'Health', 'Other'];
+const INCOME_CATEGORIES = ['Salary', 'Gift', 'Investment', 'Other'] as const;
+const EXPENSE_CATEGORIES = ['Food', 'Transport', 'Rent', 'Utilities', 'Entertainment', 'Health', 'Other'] as const;
+const KNOWN_CATEGORY_KEYS = new Set<string>([...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES]);
 
 interface DashboardClientProps {
     userFullName: string | undefined;
@@ -64,6 +66,11 @@ interface DashboardClientProps {
 export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initialUsername }: DashboardClientProps) {
     const router = useRouter();
     const { theme, toggleTheme } = useTheme();
+    const { locale, t } = useLocale();
+    const dateLocale = locale === 'hy' ? 'hy-AM' : 'en-US';
+
+    const categoryLabel = (c: string) =>
+        KNOWN_CATEGORY_KEYS.has(c) ? t(`categories.${c}`) : c;
     
     // Username State
     const [username, setUsername] = useState(initialUsername || '');
@@ -86,18 +93,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
     const [description, setDescription] = useState('');
     const [type, setType] = useState<TransactionType>('expense');
 
-    // Reset category when type changes
-    useEffect(() => {
-        setCategory(type === 'income' ? 'Salary' : 'Food');
-        setCustomCategory('');
-    }, [type]);
-
-    // Load transactions on mount
-    useEffect(() => {
-        loadTransactions();
-    }, []);
-
-    const loadTransactions = async () => {
+    const loadTransactions = useCallback(async () => {
         try {
             setLoading(true);
             const data = await getTransactions();
@@ -108,6 +104,23 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch on mount (setState inside loadTransactions)
+        void loadTransactions();
+    }, [loadTransactions]);
+
+    const switchToIncome = () => {
+        setType('income');
+        setCategory('Salary');
+        setCustomCategory('');
+    };
+
+    const switchToExpense = () => {
+        setType('expense');
+        setCategory('Food');
+        setCustomCategory('');
     };
 
     const handleSaveUsername = async (e: React.FormEvent) => {
@@ -126,7 +139,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
             setShowUsernameModal(false);
         } catch (error) {
             console.error('Error updating username:', error);
-            alert('Failed to update username. Please try again.');
+            alert(t('dashboard.failedUsername'));
         } finally {
             setIsSavingUsername(false);
         }
@@ -145,7 +158,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
         const finalCategory = category === 'Other' ? customCategory.trim() : category;
         
         if (category === 'Other' && !finalCategory) {
-            alert('Please specify the category name');
+            alert(t('dashboard.specifyCategory'));
             return;
         }
 
@@ -163,7 +176,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
             setCustomCategory('');
         } catch (error) {
             console.error('Failed to create transaction:', error);
-            alert('Failed to add transaction. Please try again.');
+            alert(t('dashboard.failedTransaction'));
         }
     };
 
@@ -186,6 +199,13 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
 
     const recentTransactions = transactions.slice(0, 5);
 
+    const historyFilterLabel = (f: 'all' | 'income' | 'expense') =>
+        f === 'all'
+            ? t('dashboard.filterAll')
+            : f === 'income'
+              ? t('dashboard.filterIncome')
+              : t('dashboard.filterExpense');
+
     return (
         <div className="flex flex-col min-h-screen relative font-sans">
             {/* Background glow effects */}
@@ -196,14 +216,15 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
             <nav className="border-b border-border bg-surface/50 backdrop-blur-xl sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <img src="/logo.png" alt="PoxChka" className="w-8 h-8 rounded-lg object-cover shadow-lg border border-border/30 bg-surface" />
+                        <img src="/logo.png" alt={t('dashboard.logoAlt')} className="w-8 h-8 rounded-lg object-cover shadow-lg border border-border/30 bg-surface" />
                         <span className="font-bold text-xl tracking-tight text-text-primary">PoxChka</span>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4">
+                        <LanguageSwitcher />
                         <button
                             onClick={toggleTheme}
                             className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors focus:outline-none"
-                            title="Toggle Theme"
+                            title={t('common.toggleTheme')}
                         >
                             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </button>
@@ -216,7 +237,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                 }}
                             >
                                 <p className="text-sm font-bold text-text-primary flex items-center gap-1 group-hover/user:text-violet-light transition-colors">
-                                    @{username || 'user'}
+                                    @{username || t('common.userFallback')}
                                     <Edit2 className="w-3 h-3 opacity-0 group-hover/user:opacity-100 transition-opacity" />
                                 </p>
                             </div>
@@ -231,7 +252,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                     {userAvatarUrl ? (
                                         <img
                                             src={userAvatarUrl}
-                                            alt="User avatar"
+                                            alt={t('dashboard.userAvatarAlt')}
                                             className="w-full h-full object-cover"
                                         />
                                     ) : (
@@ -268,7 +289,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                                 className="w-full flex items-center gap-3 px-4 py-3 text-left text-text-primary hover:bg-danger/10 hover:text-danger transition-colors"
                                             >
                                                 <LogOut className="w-5 h-5" />
-                                                <span className="font-medium">Log Out</span>
+                                                <span className="font-medium">{t('dashboard.logOut')}</span>
                                             </button>
                                         </motion.div>
                                     </>
@@ -286,35 +307,35 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
 
                     {/* Glassmorphism Total Balance Card */}
                     <div className="relative p-6 sm:p-8 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl bg-surface border border-border group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-black/[0.06] dark:from-white/5 to-transparent pointer-events-none" />
                         <div className="absolute -inset-0.5 bg-gradient-to-br from-violet-light/20 to-emerald-light/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl sm:rounded-3xl pointer-events-none blur-sm" />
 
                         <div className="relative z-10">
                             <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                <p className="text-text-secondary text-xs sm:text-sm font-semibold uppercase tracking-wider">Total Balance</p>
+                                <p className="text-text-secondary text-xs sm:text-sm font-semibold uppercase tracking-wider">{t('dashboard.totalBalance')}</p>
                                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-violet/20 flex items-center justify-center text-violet-light">
                                     <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </div>
                             </div>
                             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-text-primary to-text-secondary mb-3 sm:mb-4 tracking-tight break-all">
-                                {formatAMDLocalized(totalBalance)}
+                                {formatAMDForUi(locale, totalBalance)}
                             </h2>
 
                             <div className="flex items-center justify-between gap-4 mt-4 sm:mt-6">
                                 <div className="flex flex-col gap-1">
                                     <span className="text-xs text-text-secondary flex items-center gap-1">
-                                        <ArrowUpRight className="w-3 h-3 text-emerald" /> Income
+                                        <ArrowUpRight className="w-3 h-3 text-emerald" /> {t('dashboard.income')}
                                     </span>
                                     <span className="text-xs sm:text-sm font-semibold text-text-primary break-all">
-                                        {formatAMDLocalized(transactions.filter(t => t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0))}
+                                        {formatAMDForUi(locale, transactions.filter(t => t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0))}
                                     </span>
                                 </div>
                                 <div className="flex flex-col gap-1 items-end">
                                     <span className="text-xs text-text-secondary flex items-center gap-1">
-                                        <TrendingDown className="w-3 h-3 text-danger" /> Expenses
+                                        <TrendingDown className="w-3 h-3 text-danger" /> {t('dashboard.expenses')}
                                     </span>
                                     <span className="text-xs sm:text-sm font-semibold text-text-primary break-all">
-                                        {formatAMDLocalized(Math.abs(transactions.filter(t => t.amount < 0).reduce((acc, curr) => acc + curr.amount, 0)))}
+                                        {formatAMDForUi(locale, Math.abs(transactions.filter(t => t.amount < 0).reduce((acc, curr) => acc + curr.amount, 0)))}
                                     </span>
                                 </div>
                             </div>
@@ -325,7 +346,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                     <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-surface/60 backdrop-blur-sm border border-border">
                         <h3 className="text-lg sm:text-xl font-bold text-text-primary mb-4 sm:mb-6 flex items-center gap-2">
                             <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-violet-light" />
-                            Add Transaction
+                            {t('dashboard.addTransaction')}
                         </h3>
 
                         <form onSubmit={handleAddTransaction} className="flex flex-col gap-3 sm:gap-4">
@@ -333,30 +354,30 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                             <div className="flex p-1 bg-background rounded-xl border border-border">
                                 <button
                                     type="button"
-                                    onClick={() => setType('income')}
+                                    onClick={switchToIncome}
                                     className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${type === 'income'
                                             ? 'bg-emerald/10 text-emerald-light shadow-sm'
                                             : 'text-text-secondary hover:text-text-primary'
                                         }`}
                                 >
                                     <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    Income
+                                    {t('dashboard.incomeType')}
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setType('expense')}
+                                    onClick={switchToExpense}
                                     className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${type === 'expense'
                                             ? 'bg-danger/10 text-danger shadow-sm'
                                             : 'text-text-secondary hover:text-text-primary'
                                         }`}
                                 >
                                     <MinusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    Expense
+                                    {t('dashboard.expenseType')}
                                 </button>
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">Amount (֏)</label>
+                                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">{t('dashboard.amountLabel')}</label>
                                 <input
                                     type="text"
                                     inputMode="numeric"
@@ -367,22 +388,22 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                         const value = e.target.value.replace(/[^0-9,.\s]/g, '');
                                         setAmount(value);
                                     }}
-                                    placeholder="e.g. 5000 or 10,000"
+                                    placeholder={t('dashboard.amountPlaceholder')}
                                     className="w-full bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                     required
                                 />
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">Category</label>
+                                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">{t('dashboard.category')}</label>
                                 <div className="relative">
                                     <select
                                         value={category}
                                         onChange={(e) => setCategory(e.target.value)}
                                         className="w-full appearance-none bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                     >
-                                        {(type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
+                                        {(type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((cat) => (
+                                            <option key={cat} value={cat}>{t(`categories.${cat}`)}</option>
                                         ))}
                                     </select>
                                     <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary">
@@ -397,12 +418,12 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                     animate={{ opacity: 1, height: 'auto' }}
                                     className="flex flex-col gap-1.5"
                                 >
-                                    <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">Custom Category Name</label>
+                                    <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">{t('dashboard.customCategory')}</label>
                                     <input
                                         type="text"
                                         value={customCategory}
                                         onChange={(e) => setCustomCategory(e.target.value)}
-                                        placeholder="e.g. Bonus, Repairs, etc."
+                                        placeholder={t('dashboard.customCategoryPlaceholder')}
                                         className="w-full bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                         required
                                     />
@@ -410,12 +431,12 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                             )}
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">Description</label>
+                                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">{t('dashboard.description')}</label>
                                 <input
                                     type="text"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="What was this for?"
+                                    placeholder={t('dashboard.descriptionPlaceholder')}
                                     className="w-full bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                     required
                                 />
@@ -427,7 +448,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                   ${type === 'income' ? 'bg-gradient-to-r from-emerald to-emerald-dark shadow-emerald-glow' : 'bg-gradient-to-r from-violet to-violet-dark shadow-violet-glow'}`}
                             >
                                 <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                                Add {type === 'income' ? 'Income' : 'Expense'}
+                                {type === 'income' ? t('dashboard.addIncome') : t('dashboard.addExpense')}
                             </button>
                         </form>
                     </div>
@@ -437,13 +458,13 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                 <div className="lg:col-span-7">
                     <div className="h-[500px] sm:h-[600px] lg:h-[730px] rounded-xl sm:rounded-2xl bg-surface border border-border flex flex-col overflow-hidden shadow-sm">
                         <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between bg-surface/80 backdrop-blur-md">
-                            <h3 className="text-lg sm:text-xl font-bold text-text-primary">Recent Transactions</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-text-primary">{t('dashboard.recentTransactions')}</h3>
                             <button
                                 onClick={() => setShowHistory(true)}
                                 className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-bold rounded-lg bg-background text-violet-light border border-violet/20 hover:bg-violet/10 transition-all"
                             >
                                 <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                <span className="hidden sm:inline">History</span>
+                                <span className="hidden sm:inline">{t('dashboard.history')}</span>
                             </button>
                         </div>
 
@@ -456,7 +477,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                         className="flex flex-col items-center justify-center h-full"
                                     >
                                         <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-violet/20 border-t-violet rounded-full animate-spin mb-4" />
-                                        <p className="text-text-secondary text-xs sm:text-sm">Loading transactions...</p>
+                                        <p className="text-text-secondary text-xs sm:text-sm">{t('dashboard.loading')}</p>
                                     </motion.div>
                                 ) : recentTransactions.length === 0 ? (
                                     <motion.div
@@ -465,8 +486,8 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                         className="flex flex-col items-center justify-center h-full opacity-50"
                                     >
                                         <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 text-text-secondary mb-4" />
-                                        <p className="text-text-secondary text-base sm:text-lg">No activity yet.</p>
-                                        <p className="text-text-secondary text-xs sm:text-sm">Start by adding your first transaction!</p>
+                                        <p className="text-text-secondary text-base sm:text-lg">{t('dashboard.noActivity')}</p>
+                                        <p className="text-text-secondary text-xs sm:text-sm">{t('dashboard.noActivityHint')}</p>
                                     </motion.div>
                                 ) : (
                                     <div className="flex flex-col gap-2 sm:gap-3">
@@ -488,17 +509,17 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                                     </div>
                                                     <div className="flex flex-col min-w-0 flex-1">
                                                         <span className="font-semibold text-text-primary text-sm sm:text-base truncate">{tx.description}</span>
-                                                        <span className="text-xs text-text-secondary capitalize">{tx.category} • {new Date(tx.created_at).toLocaleDateString()}</span>
+                                                        <span className="text-xs text-text-secondary capitalize">{categoryLabel(tx.category)} • {new Date(tx.created_at).toLocaleDateString(dateLocale)}</span>
                                                     </div>
                                                 </div>
                                                 <span className={`font-bold text-sm sm:text-lg flex-shrink-0 ml-2 ${tx.amount > 0 ? 'text-emerald-light' : 'text-text-primary'}`}>
-                                                    {tx.amount > 0 ? '+' : ''}{formatAMDLocalized(tx.amount)}
+                                                    {tx.amount > 0 ? '+' : ''}{formatAMDForUi(locale, tx.amount)}
                                                 </span>
                                             </motion.div>
                                         ))}
                                         {transactions.length > 5 && (
                                             <p className="text-center text-xs text-text-secondary mt-2 sm:mt-4">
-                                                Showing latest 5 of {transactions.length} transactions
+                                                {t('dashboard.showingLatest', { count: transactions.length })}
                                             </p>
                                         )}
                                     </div>
@@ -532,11 +553,11 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-violet/10 flex items-center justify-center text-violet-light">
                                         <History className="w-5 h-5 sm:w-6 sm:h-6" />
                                     </div>
-                                    <h2 className="text-xl sm:text-2xl font-bold text-text-primary">Transaction History</h2>
+                                    <h2 className="text-xl sm:text-2xl font-bold text-text-primary">{t('dashboard.transactionHistory')}</h2>
                                 </div>
                                 <button
                                     onClick={() => setShowHistory(false)}
-                                    className="p-2 rounded-lg hover:bg-white/5 text-text-secondary transition-colors"
+                                    className="p-2 rounded-lg hover:bg-black/[0.06] dark:hover:bg-white/5 text-text-secondary transition-colors"
                                 >
                                     <X className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </button>
@@ -554,13 +575,13 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                                     : 'text-text-secondary hover:text-text-primary'
                                                 }`}
                                         >
-                                            {filter}
+                                            {historyFilterLabel(filter)}
                                         </button>
                                     ))}
                                 </div>
                                 <div className="hidden sm:flex items-center gap-2 text-xs text-text-secondary ml-auto">
                                     <Filter className="w-3 h-3" />
-                                    Filtering by {historyFilter}
+                                    {t('dashboard.filteringBy')} {historyFilterLabel(historyFilter)}
                                 </div>
                             </div>
 
@@ -568,7 +589,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                 {filteredHistory.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-48 opacity-50">
                                         <History className="w-10 h-10 sm:w-12 sm:h-12 text-text-secondary mb-4" />
-                                        <p className="text-text-secondary text-sm sm:text-base">No transactions match your filter.</p>
+                                        <p className="text-text-secondary text-sm sm:text-base">{t('dashboard.noMatchFilter')}</p>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col gap-2 sm:gap-3">
@@ -585,11 +606,11 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                                     </div>
                                                     <div className="flex flex-col min-w-0 flex-1">
                                                         <span className="font-semibold text-text-primary text-xs sm:text-sm truncate">{tx.description}</span>
-                                                        <span className="text-xs text-text-secondary capitalize">{tx.category} • {new Date(tx.created_at).toLocaleDateString()}</span>
+                                                        <span className="text-xs text-text-secondary capitalize">{categoryLabel(tx.category)} • {new Date(tx.created_at).toLocaleDateString(dateLocale)}</span>
                                                     </div>
                                                 </div>
                                                 <span className={`font-bold text-xs sm:text-sm flex-shrink-0 ml-2 ${tx.amount > 0 ? 'text-emerald-light' : 'text-text-primary'}`}>
-                                                    {tx.amount > 0 ? '+' : ''}{formatAMDLocalized(tx.amount)}
+                                                    {tx.amount > 0 ? '+' : ''}{formatAMDForUi(locale, tx.amount)}
                                                 </span>
                                             </div>
                                         ))}
@@ -618,22 +639,22 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                             className="relative w-full max-w-md bg-surface border border-border rounded-3xl shadow-2xl p-6 sm:p-8"
                         >
                             <h2 className="text-2xl font-bold text-text-primary mb-2">
-                                {username ? 'Update Username' : 'Welcome to PoxChka!'}
+                                {username ? t('dashboard.updateUsername') : t('dashboard.welcomeTitle')}
                             </h2>
                             <p className="text-sm text-text-secondary mb-6">
-                                {username ? 'Choose a new username to display on your profile.' : 'Please choose a username to get started.'}
+                                {username ? t('dashboard.usernamePromptUpdate') : t('dashboard.usernamePromptNew')}
                             </p>
 
                             <form onSubmit={handleSaveUsername} className="flex flex-col gap-4">
                                 <div>
-                                    <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 block">Username</label>
+                                    <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 block">{t('dashboard.username')}</label>
                                     <div className="relative">
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary">@</span>
                                         <input
                                             type="text"
                                             value={newUsername}
                                             onChange={(e) => setNewUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase())}
-                                            placeholder="your_username"
+                                            placeholder={t('dashboard.usernamePlaceholder')}
                                             className="w-full bg-background border border-border rounded-xl pl-8 pr-4 py-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                             required
                                             minLength={3}
@@ -652,7 +673,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                             }}
                                             className="flex-1 py-3 rounded-xl border border-border text-text-secondary font-semibold hover:text-text-primary hover:border-text-secondary transition-all"
                                         >
-                                            Cancel
+                                            {t('dashboard.cancel')}
                                         </button>
                                     )}
                                     <button
@@ -660,7 +681,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                         disabled={isSavingUsername || !newUsername.trim() || newUsername === username}
                                         className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet to-emerald text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-lg"
                                     >
-                                        {isSavingUsername ? 'Saving...' : 'Save'}
+                                        {isSavingUsername ? t('dashboard.saving') : t('dashboard.save')}
                                     </button>
                                 </div>
                             </form>
@@ -671,7 +692,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
 
             {/* Footer */}
             <footer className="py-4 sm:py-6 text-center text-xs sm:text-sm text-text-secondary/60">
-                PoxChka — Precision in Every Transaction
+                {t('dashboard.footerTagline')}
             </footer>
         </div>
     );
