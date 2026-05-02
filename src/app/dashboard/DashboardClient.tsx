@@ -177,7 +177,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
             <nav className="border-b border-border bg-surface/50 backdrop-blur-xl sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <img src="/logo.jpg" alt="PoxChka" className="w-8 h-8 rounded-lg object-cover shadow-lg border border-border/30 bg-surface" />
+                        <img src="/logo.png" alt="PoxChka" className="w-8 h-8 rounded-lg object-cover shadow-lg border border-border/30 bg-surface" />
                         <span className="font-bold text-xl tracking-tight text-text-primary">PoxChka</span>
                     </div>
                     <div className="flex items-center gap-4">

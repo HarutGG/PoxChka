@@ -18,7 +18,7 @@ export default function Home() {
       >
         {/* Logo mark */}
         <div className="flex items-center justify-center w-28 h-28 rounded-3xl overflow-hidden shadow-lg border-2 border-border/30 bg-surface">
-          <img src="/logo.jpg" alt="PoxChka Logo" className="w-full h-full object-cover" />
+          <img src="/logo.png" alt="PoxChka Logo" className="w-full h-full object-cover" />
         </div>
 
         {/* Title */}
