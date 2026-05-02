@@ -14,9 +14,6 @@ export async function updateSession(request: NextRequest) {
     // don't crash the middleware. This allows the app to load so the user can see
     // configuration errors elsewhere.
     if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.startsWith('http')) {
-        // #region agent log
-        fetch('http://127.0.0.1:7529/ingest/5e4bced6-a7a8-453e-8158-9b9993b67a56',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ce418e'},body:JSON.stringify({sessionId:'ce418e',runId:'pre-fix',hypothesisId:'B',location:'middleware.ts:earlyExit',message:'skipped supabase (env)',data:{pathname:request.nextUrl.pathname,hasUrl:!!supabaseUrl,urlPrefix:supabaseUrl?.slice?.(0,12)??null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return supabaseResponse
     }
 
@@ -47,10 +44,6 @@ export async function updateSession(request: NextRequest) {
     const {
         data: { user },
     } = await supabase.auth.getUser()
-
-    // #region agent log
-    fetch('http://127.0.0.1:7529/ingest/5e4bced6-a7a8-453e-8158-9b9993b67a56',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ce418e'},body:JSON.stringify({sessionId:'ce418e',runId:'pre-fix',hypothesisId:'C',location:'middleware.ts:afterGetUser',message:'session check',data:{pathname:request.nextUrl.pathname,hasUser:!!user,userId:user?.id?.slice?.(0,8)??null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     // 4. Protected routes logic
     // If no user and trying to access a protected route, redirect to login

@@ -1,47 +1,77 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+const DEFAULT_NEXT = '/dashboard'
+
+/**
+ * Public site URL for redirects. Set NEXT_PUBLIC_SITE_URL in Vercel to your
+ * canonical origin (e.g. https://pox-chka.vercel.app). If unset, we derive
+ * from proxy headers or the request URL (works for local dev).
+ */
+function getSiteUrl(request: Request): string {
+    const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
+    if (env) return env
+
+    const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+    const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+    if (forwardedHost) {
+        const proto = forwardedProto ?? 'https'
+        return `${proto}://${forwardedHost}`
+    }
+
+    return new URL(request.url).origin
+}
+
+/**
+ * Supabase may pass next=/ (matching Site URL). Treat that as invalid for post-login.
+ */
+function safeNextPath(raw: string | null): string {
+    if (raw == null || raw === '' || raw === '/') return DEFAULT_NEXT
+    if (!raw.startsWith('/') || raw.startsWith('//')) return DEFAULT_NEXT
+    if (raw.includes('://')) return DEFAULT_NEXT
+    if (raw.startsWith('/auth/callback')) return DEFAULT_NEXT
+    return raw
+}
 
 export async function GET(request: Request) {
-    const { searchParams, origin } = new URL(request.url)
+    const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
-    // if "next" is in search params, use it as the redirection URL
-    const next = searchParams.get('next') ?? '/dashboard'
+    const next = safeNextPath(searchParams.get('next'))
+    const siteUrl = getSiteUrl(request)
 
-    // #region agent log
-    fetch('http://127.0.0.1:7529/ingest/5e4bced6-a7a8-453e-8158-9b9993b67a56',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ce418e'},body:JSON.stringify({sessionId:'ce418e',runId:'pre-fix',hypothesisId:'A',location:'auth/callback/route.ts:entry',message:'callback GET',data:{hasCode:!!code,nextParam:searchParams.get('next'),resolvedNext:next,origin},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return NextResponse.redirect(`${siteUrl}/login?message=${encodeURIComponent('Server configuration error')}`)
+    }
 
     if (code) {
-        const supabase = await createClient()
+        const redirectUrl = `${siteUrl}${next}`
+        const redirectResponse = NextResponse.redirect(redirectUrl)
+        const cookieStore = await cookies()
+
+        const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll()
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        redirectResponse.cookies.set(name, value, options)
+                    )
+                },
+            },
+        })
+
         const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-        // #region agent log
-        fetch('http://127.0.0.1:7529/ingest/5e4bced6-a7a8-453e-8158-9b9993b67a56',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ce418e'},body:JSON.stringify({sessionId:'ce418e',runId:'pre-fix',hypothesisId:'D',location:'auth/callback/route.ts:afterExchange',message:'exchangeCodeForSession result',data:{exchangeError:error?.message??null,nextAfterExchange:next},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-
         if (!error) {
-            const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
-            const isLocalEnv = process.env.NODE_ENV === 'development'
-            let redirectUrl: string
-            if (isLocalEnv) {
-                // we can be sure that there is no proxy involved in local dev
-                redirectUrl = `${origin}${next}`
-            } else if (forwardedHost) {
-                redirectUrl = `https://${forwardedHost}${next}`
-            } else {
-                redirectUrl = `${origin}${next}`
-            }
-            // #region agent log
-            fetch('http://127.0.0.1:7529/ingest/5e4bced6-a7a8-453e-8158-9b9993b67a56',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ce418e'},body:JSON.stringify({sessionId:'ce418e',runId:'pre-fix',hypothesisId:'E',location:'auth/callback/route.ts:redirect',message:'success redirect',data:{redirectUrl,isLocalEnv,hasForwardedHost:!!forwardedHost},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-            return NextResponse.redirect(redirectUrl)
+            return redirectResponse
         }
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7529/ingest/5e4bced6-a7a8-453e-8158-9b9993b67a56',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ce418e'},body:JSON.stringify({sessionId:'ce418e',runId:'pre-fix',hypothesisId:'D',location:'auth/callback/route.ts:fallback',message:'redirect login (no code or exchange failed)',data:{hasCode:!!code},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
-    // return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/login?message=Could not authenticate user`)
+    return NextResponse.redirect(
+        `${siteUrl}/login?message=${encodeURIComponent('Could not authenticate user')}`
+    )
 }

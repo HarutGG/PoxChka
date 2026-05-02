@@ -2,12 +2,9 @@
 
 import { createClient } from '@/utils/supabase/client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
 
     const handleGoogleLogin = async () => {
         setLoading(true);
@@ -16,9 +13,13 @@ export default function LoginPage() {
         try {
             const supabase = createClient();
             
-            // Use NEXT_PUBLIC_SITE_URL if available, otherwise use window.location.origin
-            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-                           (typeof window !== 'undefined' ? window.location.origin : '');
+            // Prefer current browser origin so OAuth return matches the host you are on
+            // (localhost, Vercel preview, or custom domain). NEXT_PUBLIC_SITE_URL can
+            // still override when set explicitly.
+            const baseUrl =
+                (typeof window !== 'undefined' ? window.location.origin : '') ||
+                process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+                '';
             const redirectUrl = `${baseUrl}/auth/callback`;
 
             const { error } = await supabase.auth.signInWithOAuth({
