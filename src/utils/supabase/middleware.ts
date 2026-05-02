@@ -1,3 +1,4 @@
+// Updated middleware for PoxChka v1.1
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
