@@ -38,7 +38,7 @@ import {
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 
-const CATEGORY_ICONS: Record<TransactionCategory, React.ReactNode> = {
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     Food: <Utensils className="w-5 h-5" />,
     Transport: <Bus className="w-5 h-5" />,
     Rent: <Home className="w-5 h-5" />,
@@ -46,8 +46,13 @@ const CATEGORY_ICONS: Record<TransactionCategory, React.ReactNode> = {
     Salary: <Briefcase className="w-5 h-5" />,
     Entertainment: <Film className="w-5 h-5" />,
     Health: <Heart className="w-5 h-5" />,
+    Investment: <TrendingDown className="w-5 h-5 rotate-180" />,
+    Gift: <PlusCircle className="w-5 h-5" />,
     Other: <CreditCard className="w-5 h-5" />,
 };
+
+const INCOME_CATEGORIES = ['Salary', 'Gift', 'Investment', 'Other'];
+const EXPENSE_CATEGORIES = ['Food', 'Transport', 'Rent', 'Utilities', 'Entertainment', 'Health', 'Other'];
 
 interface DashboardClientProps {
     userFullName: string | undefined;
@@ -76,9 +81,16 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
 
     // Form State
     const [amount, setAmount] = useState('');
-    const [category, setCategory] = useState<TransactionCategory>('Food');
+    const [category, setCategory] = useState<string>('Food');
+    const [customCategory, setCustomCategory] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState<TransactionType>('expense');
+
+    // Reset category when type changes
+    useEffect(() => {
+        setCategory(type === 'income' ? 'Salary' : 'Food');
+        setCustomCategory('');
+    }, [type]);
 
     // Load transactions on mount
     useEffect(() => {
@@ -130,11 +142,17 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
         if (isNaN(numericAmount) || numericAmount === 0 || !description) return;
 
         const finalAmount = type === 'income' ? numericAmount : -numericAmount;
+        const finalCategory = category === 'Other' ? customCategory.trim() : category;
+        
+        if (category === 'Other' && !finalCategory) {
+            alert('Please specify the category name');
+            return;
+        }
 
         try {
             const newTransaction = await createTransaction({
                 amount: finalAmount,
-                category,
+                category: finalCategory,
                 description,
             });
 
@@ -142,6 +160,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
             setTotalBalance(prev => prev + finalAmount);
             setAmount('');
             setDescription('');
+            setCustomCategory('');
         } catch (error) {
             console.error('Failed to create transaction:', error);
             alert('Failed to add transaction. Please try again.');
@@ -359,10 +378,10 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                 <div className="relative">
                                     <select
                                         value={category}
-                                        onChange={(e) => setCategory(e.target.value as TransactionCategory)}
+                                        onChange={(e) => setCategory(e.target.value)}
                                         className="w-full appearance-none bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
                                     >
-                                        {['Food', 'Transport', 'Rent', 'Utilities', 'Salary', 'Entertainment', 'Health', 'Other'].map(cat => (
+                                        {(type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(cat => (
                                             <option key={cat} value={cat}>{cat}</option>
                                         ))}
                                     </select>
@@ -371,6 +390,24 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                     </div>
                                 </div>
                             </div>
+
+                            {category === 'Other' && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="flex flex-col gap-1.5"
+                                >
+                                    <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">Custom Category Name</label>
+                                    <input
+                                        type="text"
+                                        value={customCategory}
+                                        onChange={(e) => setCustomCategory(e.target.value)}
+                                        placeholder="e.g. Bonus, Repairs, etc."
+                                        className="w-full bg-background border border-border rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
+                                        required
+                                    />
+                                </motion.div>
+                            )}
 
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-left">Description</label>
@@ -447,7 +484,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                             ${tx.amount > 0 ? 'bg-emerald/10 text-emerald-light' : 'bg-violet/10 text-violet-light'}
                             group-hover:scale-110 transition-transform duration-300
                           `}>
-                                                        {CATEGORY_ICONS[tx.category]}
+                                                        {CATEGORY_ICONS[tx.category] || <CreditCard className="w-5 h-5" />}
                                                     </div>
                                                     <div className="flex flex-col min-w-0 flex-1">
                                                         <span className="font-semibold text-text-primary text-sm sm:text-base truncate">{tx.description}</span>
@@ -544,7 +581,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                                     <div className={`w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-full flex items-center justify-center
                             ${tx.amount > 0 ? 'bg-emerald/10 text-emerald-light' : 'bg-violet/10 text-violet-light'}
                           `}>
-                                                        {CATEGORY_ICONS[tx.category]}
+                                                        {CATEGORY_ICONS[tx.category] || <CreditCard className="w-5 h-5" />}
                                                     </div>
                                                     <div className="flex flex-col min-w-0 flex-1">
                                                         <span className="font-semibold text-text-primary text-xs sm:text-sm truncate">{tx.description}</span>

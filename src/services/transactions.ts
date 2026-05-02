@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/client';
 
-export type TransactionCategory = 'Food' | 'Transport' | 'Rent' | 'Utilities' | 'Salary' | 'Entertainment' | 'Health' | 'Other';
+export type TransactionCategory = 'Food' | 'Transport' | 'Rent' | 'Utilities' | 'Salary' | 'Entertainment' | 'Health' | 'Other' | string;
 export type TransactionType = 'income' | 'expense';
 
 export interface Transaction {
