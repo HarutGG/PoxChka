@@ -52,8 +52,8 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
-    // If user is authenticated and trying to access login, redirect to dashboard
-    if (user && request.nextUrl.pathname === '/login') {
+    // If user is authenticated and trying to access login or home, redirect to dashboard
+    if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/')) {
         const url = request.nextUrl.clone()
         url.pathname = '/dashboard'
         return NextResponse.redirect(url)
