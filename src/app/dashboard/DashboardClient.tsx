@@ -20,8 +20,12 @@ import {
     PlusCircle,
     MinusCircle,
     LogOut,
-    ChevronDown
+    ChevronDown,
+    Moon,
+    Sun,
+    Edit2
 } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { formatAMDLocalized } from '@/lib/formatters';
 import { 
     getTransactions, 
@@ -49,10 +53,18 @@ interface DashboardClientProps {
     userFullName: string | undefined;
     userEmail: string | undefined;
     userAvatarUrl: string | undefined;
+    initialUsername?: string;
 }
 
-export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: DashboardClientProps) {
+export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initialUsername }: DashboardClientProps) {
     const router = useRouter();
+    const { theme, toggleTheme } = useTheme();
+    
+    // Username State
+    const [username, setUsername] = useState(initialUsername || '');
+    const [showUsernameModal, setShowUsernameModal] = useState(!initialUsername);
+    const [newUsername, setNewUsername] = useState(initialUsername || '');
+    const [isSavingUsername, setIsSavingUsername] = useState(false);
     
     // State
     const [totalBalance, setTotalBalance] = useState(0);
@@ -83,6 +95,28 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
             console.error('Failed to load transactions:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveUsername = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const trimmedUsername = newUsername.trim();
+        if (!trimmedUsername) return;
+        
+        setIsSavingUsername(true);
+        try {
+            const supabase = createClient();
+            const { error } = await supabase.auth.updateUser({
+                data: { username: trimmedUsername }
+            });
+            if (error) throw error;
+            setUsername(trimmedUsername);
+            setShowUsernameModal(false);
+        } catch (error) {
+            console.error('Error updating username:', error);
+            alert('Failed to update username. Please try again.');
+        } finally {
+            setIsSavingUsername(false);
         }
     };
 
@@ -143,17 +177,31 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
             <nav className="border-b border-border bg-surface/50 backdrop-blur-xl sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet to-emerald flex items-center justify-center font-bold text-white text-sm shadow-lg shadow-violet-glow">
-                            P
-                        </div>
+                        <img src="/logo.jpg" alt="PoxChka" className="w-8 h-8 rounded-lg object-cover shadow-lg border border-border/30 bg-surface" />
                         <span className="font-bold text-xl tracking-tight text-text-primary">PoxChka</span>
                     </div>
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors focus:outline-none"
+                            title="Toggle Theme"
+                        >
+                            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                        </button>
                         <div className="text-right hidden sm:block">
-                            <p className="text-sm font-medium text-text-primary capitalize">
-                                {userFullName || userEmail?.split('@')[0]}
-                            </p>
-                            <p className="text-xs text-text-secondary">{userEmail}</p>
+                            <div 
+                                className="flex items-center justify-end gap-2 group/user cursor-pointer transition-colors hover:text-violet-light" 
+                                onClick={() => {
+                                    setNewUsername(username || '');
+                                    setShowUsernameModal(true);
+                                }}
+                            >
+                                <p className="text-sm font-bold text-text-primary flex items-center gap-1 group-hover/user:text-violet-light transition-colors">
+                                    @{username || 'user'}
+                                    <Edit2 className="w-3 h-3 opacity-0 group-hover/user:opacity-100 transition-opacity" />
+                                </p>
+                            </div>
+                            <p className="text-xs text-text-secondary">{userFullName || userEmail?.split('@')[0]}</p>
                         </div>
                         <div className="relative">
                             <button
@@ -511,6 +559,74 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl }: Dash
                                     </div>
                                 )}
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Username Modal */}
+            <AnimatePresence>
+                {showUsernameModal && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-md bg-surface border border-border rounded-3xl shadow-2xl p-6 sm:p-8"
+                        >
+                            <h2 className="text-2xl font-bold text-text-primary mb-2">
+                                {username ? 'Update Username' : 'Welcome to PoxChka!'}
+                            </h2>
+                            <p className="text-sm text-text-secondary mb-6">
+                                {username ? 'Choose a new username to display on your profile.' : 'Please choose a username to get started.'}
+                            </p>
+
+                            <form onSubmit={handleSaveUsername} className="flex flex-col gap-4">
+                                <div>
+                                    <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 block">Username</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary">@</span>
+                                        <input
+                                            type="text"
+                                            value={newUsername}
+                                            onChange={(e) => setNewUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase())}
+                                            placeholder="your_username"
+                                            className="w-full bg-background border border-border rounded-xl pl-8 pr-4 py-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-violet/50 focus:border-violet transition-all"
+                                            required
+                                            minLength={3}
+                                            maxLength={20}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 mt-4">
+                                    {username && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowUsernameModal(false);
+                                                setNewUsername(username);
+                                            }}
+                                            className="flex-1 py-3 rounded-xl border border-border text-text-secondary font-semibold hover:text-text-primary hover:border-text-secondary transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingUsername || !newUsername.trim() || newUsername === username}
+                                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet to-emerald text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-lg"
+                                    >
+                                        {isSavingUsername ? 'Saving...' : 'Save'}
+                                    </button>
+                                </div>
+                            </form>
                         </motion.div>
                     </div>
                 )}

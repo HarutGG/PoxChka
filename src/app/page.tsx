@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { ThemeToggleButton } from "@/components/ThemeToggleButton";
 
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6">
+      <div className="absolute top-6 right-6 z-50">
+        <ThemeToggleButton />
+      </div>
       {/* Ambient glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-violet/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-emerald/5 blur-[100px] pointer-events-none" />
@@ -13,8 +17,8 @@ export default function Home() {
         style={{ animation: "fade-in 0.8s ease-out" }}
       >
         {/* Logo mark */}
-        <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-violet to-emerald shadow-lg">
-          <span className="text-3xl font-bold text-white tracking-tight">P</span>
+        <div className="flex items-center justify-center w-28 h-28 rounded-3xl overflow-hidden shadow-lg border-2 border-border/30 bg-surface">
+          <img src="/logo.jpg" alt="PoxChka Logo" className="w-full h-full object-cover" />
         </div>
 
         {/* Title */}
@@ -39,12 +43,6 @@ export default function Home() {
           >
             Get Started
           </Link>
-          <button
-            id="learn-more-btn"
-            className="px-8 py-3 rounded-xl border border-border text-text-secondary font-medium text-base transition-all duration-300 hover:border-violet hover:text-text-primary cursor-pointer"
-          >
-            Learn More
-          </button>
         </div>
 
         {/* Feature pills */}
