@@ -29,11 +29,6 @@ export default function Home() {
           </span>
         </h1>
 
-        {/* Subtitle */}
-        <p className="max-w-md text-lg text-text-secondary leading-relaxed">
-          Your premium finance companion. Track spending, monitor budgets, and
-          grow your wealth — all in one beautiful interface.
-        </p>
 
         {/* CTA buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">

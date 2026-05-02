@@ -285,7 +285,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                 <div className="lg:col-span-5 flex flex-col gap-4 sm:gap-6 lg:gap-8">
 
                     {/* Glassmorphism Total Balance Card */}
-                    <div className="relative p-6 sm:p-8 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-surface/40 backdrop-blur-md border border-white/10 group">
+                    <div className="relative p-6 sm:p-8 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl bg-surface border border-border group">
                         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                         <div className="absolute -inset-0.5 bg-gradient-to-br from-violet-light/20 to-emerald-light/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl sm:rounded-3xl pointer-events-none blur-sm" />
 
@@ -435,8 +435,8 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
 
                 {/* Right Column: Recent Transactions List */}
                 <div className="lg:col-span-7">
-                    <div className="h-[500px] sm:h-[600px] lg:h-[730px] rounded-xl sm:rounded-2xl bg-surface/40 backdrop-blur-sm border border-border flex flex-col overflow-hidden">
-                        <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between bg-surface/50">
+                    <div className="h-[500px] sm:h-[600px] lg:h-[730px] rounded-xl sm:rounded-2xl bg-surface border border-border flex flex-col overflow-hidden shadow-sm">
+                        <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between bg-surface/80 backdrop-blur-md">
                             <h3 className="text-lg sm:text-xl font-bold text-text-primary">Recent Transactions</h3>
                             <button
                                 onClick={() => setShowHistory(true)}
@@ -477,7 +477,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                                                 transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                                                className="group flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl bg-background border border-white/5 hover:border-violet/30 hover:bg-surface/60 transition-all duration-300"
+                                                className="group flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl bg-background border border-border/50 hover:border-violet/40 hover:bg-surface transition-all duration-300"
                                             >
                                                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                                                     <div className={`w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 rounded-full flex items-center justify-center shadow-inner
@@ -575,7 +575,7 @@ export function DashboardClient({ userFullName, userEmail, userAvatarUrl, initia
                                         {filteredHistory.map((tx) => (
                                             <div
                                                 key={tx.id}
-                                                className="flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl bg-background border border-white/5"
+                                                className="flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl bg-background border border-border"
                                             >
                                                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                                                     <div className={`w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-full flex items-center justify-center

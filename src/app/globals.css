@@ -133,24 +133,29 @@ body {
    ═══════════════════════════════════════════════════════════════ */
 
 .light {
-  --color-background: #FFFFFF;
-  --color-surface: #F3F4F6;
-  --color-surface-hover: #E5E7EB;
-  --color-border: #D1D5DB;
+  /* ── Modern Light Palette (Slate & Indigo) ── */
+  --color-background: #F8FAFC; /* Slate 50 */
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F1F5F9; /* Slate 100 */
+  --color-border: #E2E8F0; /* Slate 200 */
 
-  --color-text-primary: #1F2937;
-  --color-text-secondary: #4B5563;
-  --color-foreground: #1F2937;
+  --color-text-primary: #0F172A; /* Slate 900 */
+  --color-text-secondary: #64748B; /* Slate 500 */
+  --color-foreground: #0F172A;
 
-  /* Accent: Light Blue */
-  --color-violet: #3B82F6;
-  --color-violet-light: #60A5FA;
-  --color-violet-dark: #2563EB;
-  --color-violet-glow: rgba(59, 130, 246, 0.2);
+  /* Accent: Professional Indigo instead of pure Blue */
+  --color-violet: #6366F1; /* Indigo 500 */
+  --color-violet-light: #818CF8; /* Indigo 400 */
+  --color-violet-dark: #4F46E5; /* Indigo 600 */
+  --color-violet-glow: rgba(99, 102, 241, 0.1);
 
-  /* Emerald stays green but adjusted for light */
-  --color-emerald: #059669;
-  --color-emerald-light: #10B981;
-  --color-emerald-dark: #047857;
-  --color-emerald-glow: rgba(5, 150, 105, 0.2);
+  /* Emerald green refined for light background */
+  --color-emerald: #10B981;
+  --color-emerald-light: #34D399;
+  --color-emerald-dark: #059669;
+  --color-emerald-glow: rgba(16, 185, 129, 0.1);
+
+  /* Semantic Overrides */
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
 }
